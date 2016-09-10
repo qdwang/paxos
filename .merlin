@@ -1,0 +1,6 @@
+PKG cohttp lwt
+
+S ./
+S ./src
+
+B ./_build/**
