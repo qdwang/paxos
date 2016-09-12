@@ -20,7 +20,7 @@ module Client = struct
     let rec pick lst elem largest_ts = 
       match lst with
       | hd :: tl ->
-        let (ticket_store, cmd) = hd in 
+        let ticket_store, _ = hd in 
         let (e, lt) = 
           if ticket_store > largest_ts then 
             (hd, ticket_store) 
@@ -32,8 +32,8 @@ module Client = struct
   in
   pick lst (0, "") 0
 
-  let init_state () = {
-    server_lst = ["127.0.0.1"];
+  let init_state server_lst = {
+    server_lst = server_lst;
     returned_tickets = [];
     answers = [];
     command = "";
@@ -91,3 +91,10 @@ module Server = struct
       DoNothing
 
 end
+
+
+
+type states_of_node = {
+  client: Client.state;
+  server: Server.state;
+}
