@@ -4,7 +4,7 @@ type action =
   | Propose of int * string
   | Answer of bool
   | Execute of string
-  | DoNothing
+  | Rest
 
 
 module Client = struct
@@ -50,14 +50,25 @@ module Client = struct
       if ticket_store > 0 then s.command <- cmd;
       Propose (s.ticket_num, s.command)
     else
-      DoNothing
+      Rest
         
   let answer_callback s = 
     if (List.length s.server_lst) / (List.length s.answers) < 2 then
       Execute s.command
     else
-      DoNothing
+      Rest
 
+  let reply s action = 
+    match action with
+    | ReturnTicket (ticket_store, command) ->
+      s.returned_tickets <- (ticket_store, command) :: s.returned_tickets;
+      return_ticket_callback s
+    | Answer true ->
+      s.answers <- "" :: s.answers;
+      answer_callback s
+    | _ -> Rest
+
+  
 end
 
 
@@ -80,7 +91,7 @@ module Server = struct
       let _ = s.ticket_max <- ticket_num in
       ReturnTicket (s.ticket_store, s.command)
     else
-      DoNothing
+      Rest
       
   let listen_for_propose s ticket_num command =
     if ticket_num = s.ticket_max then
@@ -88,7 +99,18 @@ module Server = struct
       let _ = s.ticket_store <- ticket_num in
       Answer true
     else
-      DoNothing
+      Rest
+
+
+  let reply s action = 
+    match action with
+    | AskTicket (_, ticket_num) ->
+      listen_for_ticket ticket_num s
+    | Propose (ticket_num, command) ->
+      listen_for_propose s ticket_num command
+    | Execute _ ->
+      Rest (* TODO: need the interpreter to execute the command *)
+    | _ -> Rest
 
 end
 
