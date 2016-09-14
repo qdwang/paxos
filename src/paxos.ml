@@ -1,11 +1,38 @@
+open Str
+
 type action = 
-  | AskTicket of string list * int
+  | AskTicket of int
   | ReturnTicket of int * string
   | Propose of int * string
   | Answer of bool
   | Execute of string
   | Rest
 
+let action_serialize action = 
+  match action with
+  | AskTicket ticket_num -> "AskTicket|" ^ string_of_int ticket_num
+  | ReturnTicket (ticket_store, command) -> "ReturnTicket|" ^ string_of_int ticket_store ^ "|" ^ command
+  | Propose (ticket_num, command) -> "Propose|" ^ string_of_int ticket_num ^ "|" ^ command
+  | Answer result -> "Answer|" ^ string_of_bool result
+  | Execute instruction -> "Execute|" ^ instruction
+  | Rest -> "Rest"
+
+let action_deserialize action_str = 
+  let action_str_lst = split (regexp_string "|") action_str in
+  match action_str_lst with
+  | "AskTicket" :: ticket_num_str :: _ -> 
+    AskTicket (int_of_string ticket_num_str)
+  | "ReturnTicket" :: ticket_store_str :: command :: _ ->
+    ReturnTicket (int_of_string ticket_store_str, command)
+  | "Propose" :: ticket_num_str :: command :: _ ->
+    Propose (int_of_string ticket_num_str, command)
+  | "Answer" :: result :: _ ->
+    Answer (bool_of_string result)
+  | "Execute" :: instruction :: _ ->
+    Execute instruction
+  | "Rest" :: _ ->
+    Rest
+  | _ -> raise (Failure ("action_deserialize with unknown action string: " ^ action_str))
 
 module Client = struct
   type state = {
@@ -42,7 +69,7 @@ module Client = struct
 
   let ask_for_ticket s =
     s.ticket_num <- s.ticket_num + 1;
-    AskTicket (s.server_lst, s.ticket_num)
+    AskTicket s.ticket_num
     
   let return_ticket_callback s =
     if (List.length s.server_lst) / (List.length s.returned_tickets) < 2 then
@@ -75,12 +102,17 @@ end
 
 module Server = struct
   type state = {
+    name: string;
     mutable ticket_max: int;
     mutable command: string;
     mutable ticket_store: int;
   }
 
-  let init_state () = {
+  let detect_name name s =
+    s.name = name
+
+  let init_state name = {
+    name = name;
     ticket_max = 0;
     command = "";
     ticket_store = 0;  
@@ -104,7 +136,7 @@ module Server = struct
 
   let reply s action = 
     match action with
-    | AskTicket (_, ticket_num) ->
+    | AskTicket ticket_num ->
       listen_for_ticket ticket_num s
     | Propose (ticket_num, command) ->
       listen_for_propose s ticket_num command

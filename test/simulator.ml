@@ -1,4 +1,6 @@
 open Paxos
+open Conn
+open Str
 
 let lst_remove item lst =
   let rec remove old_lst new_lst =
@@ -9,41 +11,33 @@ let lst_remove item lst =
   in
   (List.rev (remove lst []))
 
+let create_servers server_lst =
+  let server_state_lst = List.map Server.init_state server_lst in
+  Lwt.join (List.map (
+    fun name -> 
+      server (int_of_string name) (
+        fun (uri, _, _) _ ->
+          match List.rev (split (regexp_string "/") uri) with
+          | client_action :: _ -> 
+            let client_action = Uri.pct_decode client_action in
+            action_serialize (Server.reply (List.find (Server.detect_name name) server_state_lst) (action_deserialize client_action))
+          | _ -> ""
+      )
+  ) server_lst)
+
 
 let test () =
   let server_lst = [
-    "http://127.0.0.1:1000/";
-    "http://127.0.0.1:2000/";
-    "http://127.0.0.1:3000/";
-    "http://127.0.0.1:4000/";
-    "http://127.0.0.1:5000/";
-    "http://127.0.0.1:6000/";
-    "http://127.0.0.1:7000/";
-    "http://127.0.0.1:8000/";
-    "http://127.0.0.1:9000/"
-    ] 
-  in
-  let nodes = List.map (
-    fun x -> {
-      client = Client.init_state (lst_remove x server_lst); 
-      server = Server.init_state ();
-    }) server_lst 
-  in
-  List.iter (fun node -> 
-      let rec loop action =
-        match action with
-        | AskTicket _ ->
-          loop (Server.reply node.server action)
-        | ReturnTicket _ ->
-          loop (Client.reply node.client action)
-        | Propose _ ->
-          loop (Server.reply node.server action)
-        | Answer _ ->
-          loop (Client.reply node.client action)
-        | Execute _ ->
-          loop (Server.reply node.server action)
-        | Rest ->
-          Rest
-      in
-      loop (Client.ask_for_ticket node.client)
-    ) nodes
+    "8001";
+    "8002";
+    "8003";
+    "8004";
+    "8005";
+    "8006";
+    "8007";
+    "8008";
+    "8009";
+    "8010";
+    "8011";
+  ] in
+  Lwt_main.run (create_servers server_lst)

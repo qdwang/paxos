@@ -22,6 +22,7 @@ then
         -pkg ppx_deriving_yojson \
         -pkg cohttp.lwt \
         -pkg str \
+        -pkg uri \
         -tag thread \
         -tag debug \
         -tag bin_annot \
