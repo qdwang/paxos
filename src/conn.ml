@@ -2,7 +2,10 @@ open Lwt
 open Cohttp
 open Cohttp_lwt_unix
 
-
+let simple_server port =
+  let cb _ _ _ = Server.respond_string ~status:`OK ~body:"Hello World" () in
+  Server.create ~mode:(`TCP (`Port port)) (Server.make ~callback:cb ())
+  
 let server port handler =
   let callback _conn req body =
     let uri = req |> Request.uri |> Uri.to_string in

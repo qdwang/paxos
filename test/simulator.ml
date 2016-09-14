@@ -41,3 +41,6 @@ let test () =
     "8011";
   ] in
   Lwt_main.run (create_servers server_lst)
+
+let benchmark_cohttp () =
+  Lwt_main.run (simple_server 8000)
