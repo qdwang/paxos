@@ -1,4 +1,4 @@
 
 let () =
-  (*Simulator.test ()*)
-  Simulator.benchmark_cohttp ()
+  Simulator.test ()
+  (*Simulator.benchmark_cohttp ()*)

@@ -1,6 +1,7 @@
 open Paxos
 open Conn
 open Str
+open Client
 
 let lst_remove item lst =
   let rec remove old_lst new_lst =
@@ -31,16 +32,30 @@ let test () =
     "8001";
     "8002";
     "8003";
-    "8004";
-    "8005";
-    "8006";
-    "8007";
-    "8008";
-    "8009";
-    "8010";
-    "8011";
   ] in
-  Lwt_main.run (create_servers server_lst)
+  let c = Client.init_state server_lst "blablabla" in
+  let gen_urls (sl: string list option) cmd =
+    List.map (fun port -> "http://127.0.0.1:" ^ port ^ "/" ^ cmd)
+             (match sl with | None -> server_lst | Some x -> x)
+  in
+  let rec client_router body = 
+    let reply = Client.reply c (action_deserialize body) in
+    let msg = action_serialize reply in
+    (*print_endline body;    
+    print_endline msg;    *)
+    match reply with
+    | Propose _ ->
+      Lwt_main.run (Lwt.join (List.map (fun url -> client url client_router) (gen_urls (Some (List.map (fun (_,_,x) -> x) c.returned_tickets)) msg)))
+    | Execute _ ->
+      print_endline "====================";    
+      Lwt_main.run (Lwt.join (List.map (fun url -> client url client_router) (gen_urls None msg)))
+    | _ -> ()
+  in
+  let first_msg = action_serialize (Client.ask_for_ticket c) in
+  Lwt_main.run (Lwt.join [
+    (create_servers server_lst); 
+    Lwt.join (List.map (fun url -> client url client_router) (gen_urls None first_msg))
+  ])
 
 let benchmark_cohttp () =
   Lwt_main.run (simple_server 8000)
