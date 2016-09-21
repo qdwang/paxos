@@ -36,12 +36,15 @@ let action_deserialize action_str =
 
 module Client = struct
   type state = {
+    mutable propose_sent: bool;
+    mutable execute_sent: bool;
     mutable server_lst: string list;
     mutable returned_tickets: (int * string * string) list;
     mutable answers: string list;
     mutable command: string;
     mutable ticket_num: int;
   }
+  [@@deriving yojson]
 
   let pick_largest lst =
     let rec pick lst elem largest_ts = 
@@ -60,6 +63,8 @@ module Client = struct
   pick lst (0, "", "") 0
 
   let init_state server_lst command = {
+    propose_sent = false;
+    execute_sent = false;
     server_lst = server_lst;
     returned_tickets = [];
     answers = [];
@@ -107,6 +112,7 @@ module Server = struct
     mutable command: string;
     mutable ticket_store: int;
   }
+  [@@deriving yojson]
 
   let detect_name name s =
     s.name = name
@@ -135,15 +141,26 @@ module Server = struct
 
 
   let reply s action = 
-    match action with
+    print_endline "";
+    print_endline "";
+    print_endline (action_serialize action);
+    print_endline (Yojson.Safe.to_string (state_to_yojson s));
+    print_endline "----------------------------";
+    let result = match action with
     | AskTicket ticket_num ->
       listen_for_ticket ticket_num s
     | Propose (ticket_num, command) ->
       listen_for_propose s ticket_num command
     | Execute cmd ->
-      print_endline ("exe:" ^ cmd);
+      (*if cmd = s.command then
+        print_endline ("exe:" ^ cmd);*)
+
       Rest (* TODO: need the interpreter to execute the command *)
     | _ -> Rest
+    in
+    print_endline (Yojson.Safe.to_string (state_to_yojson s));
+    print_endline (action_serialize result);
+    result    
 
 end
 

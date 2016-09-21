@@ -1,4 +1,4 @@
-PKG cohttp lwt
+PKG ppx_deriving_yojson cohttp lwt
 
 S ./
 S ./src

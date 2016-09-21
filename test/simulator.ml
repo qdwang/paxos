@@ -18,6 +18,9 @@ let create_servers server_lst =
     fun name -> 
       server (int_of_string name) (
         fun (uri, _, _) _ ->
+          print_endline "";
+          print_endline "";
+          print_endline (name ^ " Incoming:" ^ uri);
           match List.rev (split (regexp_string "/") uri) with
           | client_action :: _ -> 
             let client_action = Uri.pct_decode client_action in
@@ -26,6 +29,7 @@ let create_servers server_lst =
       )
   ) server_lst)
 
+type urls = string list [@@deriving yojson]
 
 let test () =
   let server_lst = [
@@ -41,14 +45,28 @@ let test () =
   let rec client_router body = 
     let reply = Client.reply c (action_deserialize body) in
     let msg = action_serialize reply in
-    (*print_endline body;    
+    (*print_endline "====================";    
+    print_endline body;    
     print_endline msg;    *)
     match reply with
     | Propose _ ->
-      Lwt_main.run (Lwt.join (List.map (fun url -> client url client_router) (gen_urls (Some (List.map (fun (_,_,x) -> x) c.returned_tickets)) msg)))
+      print_endline ("propose_sent:" ^ string_of_bool c.propose_sent);
+      if not c.propose_sent then
+        let urls = gen_urls (Some (List.map (fun (_,_,x) -> x) c.returned_tickets)) msg in
+        print_endline ("Propose:" ^ (Yojson.Safe.to_string (urls_to_yojson urls)));
+        let _ = c.propose_sent <- true in
+        Lwt_main.run (Lwt.join (List.map (fun url -> client url client_router) urls))
+      else
+        ()
     | Execute _ ->
-      print_endline "====================";    
-      Lwt_main.run (Lwt.join (List.map (fun url -> client url client_router) (gen_urls None msg)))
+      print_endline ("execute_sent:" ^ string_of_bool c.execute_sent);
+      if not c.execute_sent then
+        let urls = gen_urls None msg in
+        print_endline ("Execute:" ^ (Yojson.Safe.to_string (urls_to_yojson urls)));
+        let _ = c.execute_sent <- true in
+        Lwt_main.run (Lwt.join (List.map (fun url -> client url client_router) urls))
+      else
+        ()
     | _ -> ()
   in
   let first_msg = action_serialize (Client.ask_for_ticket c) in
