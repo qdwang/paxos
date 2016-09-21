@@ -36,6 +36,12 @@ let test () =
     "8001";
     "8002";
     "8003";
+    "8004";
+    "8005";
+    "8006";
+    "8007";
+    "8008";
+    "8009";
   ] in
   let c = Client.init_state server_lst "blablabla" in
   let gen_urls (sl: string list option) cmd =
