@@ -36,6 +36,7 @@ let action_deserialize action_str =
 
 module Client = struct
   type state = {
+    name: string;
     mutable propose_sent: bool;
     mutable execute_sent: bool;
     mutable server_lst: string list;
@@ -62,7 +63,8 @@ module Client = struct
   in
   pick lst (0, "", "") 0
 
-  let init_state server_lst command = {
+  let init_state name server_lst command = {
+    name = name;
     propose_sent = false;
     execute_sent = false;
     server_lst = server_lst;
